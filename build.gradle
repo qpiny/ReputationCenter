@@ -1,0 +1,62 @@
+version = '0.0.1'
+
+apply plugin: 'scala'
+apply plugin: 'eclipse'
+apply plugin: 'application'
+
+mainClassName = 'org.rejna.repcenter.MongoTest'
+
+ext {
+	majorScalaVersion = '2.10'
+	scalaVersion = '2.10.3'
+	akkaVersion = '2.2.3'
+	sprayVersion = '1.2.0'
+}
+
+repositories {
+	mavenCentral()
+	maven { url 'http://akka.io/releases' }
+	//maven { url 'https://oss.sonatype.org/content/repositories/releases/' }
+	maven { url 'http://repo.typesafe.com/typesafe/releases/' }
+	maven { url 'http://repo.spray.io/' }
+	maven { url 'http://repo.gradle.org/gradle/repo' }
+}
+
+dependencies {
+	compile group: 'org.scala-lang', name: 'scala-library', version: scalaVersion
+	compile group: 'io.spray', name: 'spray-client', version: sprayVersion
+	compile group: 'io.spray', name: 'spray-json_' + majorScalaVersion, version: '1.2.5'
+	compile group: 'org.reactivemongo', name: 'reactivemongo_' + majorScalaVersion, version: '0.10.0'
+	
+	compile group: 'com.typesafe.akka', name: 'akka-actor_' + majorScalaVersion, version: akkaVersion
+	compile group: 'com.typesafe.akka', name: 'akka-slf4j_' + majorScalaVersion, version: akkaVersion
+	compile group: 'ch.qos.logback', name: 'logback-classic', version: '1.0.13'
+	compile group: 'joda-time', name: 'joda-time', version: '2.3'
+	
+	compile group: 'org.scala-lang', name: 'scala-compiler', version: scalaVersion
+	compile group: 'org.scala-lang', name: 'jline', version: scalaVersion
+}
+
+task wrapper(type: Wrapper) {
+	gradleVersion = '1.10'
+}
+
+tasks.withType(ScalaCompile) {
+	scalaCompileOptions.fork = false
+	scalaCompileOptions.unchecked = true
+	scalaCompileOptions.deprecation = true
+	scalaCompileOptions.setAdditionalParameters(['-feature'])
+	
+	scalaCompileOptions.useCompileDaemon = false
+	scalaCompileOptions.useAnt = true
+	
+	
+	configure(scalaCompileOptions.forkOptions) {
+		memoryMaximumSize = '1g'
+		jvmArgs = ['-XX:MaxPermSize=512m']
+	}
+}
+
+run {
+	standardInput = System.in
+}
