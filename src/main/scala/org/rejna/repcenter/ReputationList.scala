@@ -13,13 +13,17 @@ import spray.can.Http
 import spray.http.{ HttpRequest, HttpResponse, Uri }
 import spray.http.HttpMethods.GET
 
+import reactivemongo.bson._
+
 import ListParser.{ Success, NoSuccess }
 
-case class ReputationList(name: String, url: String, confidence: Int, fields: List[String], parsers: ListParser.Parser[Map[String, String]])(implicit val system: ActorSystem) {
+case class ReputationList(name: String, url: String, confidence: Int, fields: List[String], parsers: ListParser.Parser[BSONDocument])(implicit val system: ActorSystem) {
   import system.dispatcher // execution context for futures
   implicit val timeout = Timeout(10 seconds)
   val log = Logger(this.getClass, name)
 
+  def idFields = fields
+  
   def get() = {
     actor(new Act {
       IO(Http) ! HttpRequest(GET, Uri(url))

@@ -1,11 +1,14 @@
 package org.rejna.repcenter
 
-import scala.concurrent.ExecutionContext
+import java.util.Date
+
+import scala.concurrent.{ ExecutionContext, Future }
 
 import akka.actor.ActorSystem
 
 import reactivemongo.api._
 import reactivemongo.bson._
+import reactivemongo.core.commands.LastError
 
 class Datastore(implicit val executionContext: ExecutionContext) {
   val driver = new MongoDriver
@@ -19,21 +22,24 @@ class Datastore(implicit val executionContext: ExecutionContext) {
   }
   class Liststore(list: ReputationList) {
 
-    def update(obj: Map[String, String]) = {
-      
-      val query = BSONDocument(obj.collect {
-        case (f, v) if list.fields contains f => f -> BSONString(v)
-      })
-      
-      val a = objCollection.find(query).cursor.headOption.map {
-        case Some(d) => 
-        case None => 
-      }
-        case (field, value) => (field, value)
-      }))
+    def update(obj: BSONDocument) = {
+      val query = BSONDocument(list.idFields.flatMap(f => obj.get(f).map(f -> _)))
+      val now = BSONDateTime(new Date().getTime)
 
+      objCollection
+        .update(query, BSONDocument("$set" -> (query ++ BSONDocument("lastInsert" -> now, "a" -> "c"))))
+        .flatMap {
+          case le @ LastError(_, _, _, _, _, _, true) =>
+            println("Record updated")
+            Future.successful(le)
+          case LastError(_, _, _, _, _, _, false) =>
+            println("Record not found")
+            objCollection.insert(query ++ BSONDocument("lastInsert" -> now, "firstInsert" -> now))
+        }
+        .onFailure {
+          case t => println("Insert failed : " + t)
+        }
     }
-
   }
 }
 

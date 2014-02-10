@@ -7,12 +7,14 @@ import scala.util.parsing.combinator._
 
 import akka.actor.ActorSystem
 
+import reactivemongo.bson._
+
 object ListParser extends JavaTokenParsers {
   def stringLiteralContent: Parser[String] = stringLiteral ^^ { _.drop(1).dropRight(1) }
 
-  def domain: Parser[Map[String, String]] = """(?:(?:[\p{Graph}&&[^\.]])+\.)+\p{Alpha}+""".r ^^ { value => Map("domain" -> value) }
-  def ip: Parser[Map[String, String]] = """\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}""".r ^^ { value => Map("ip" -> value) }
-  def comment(s: String): Parser[Map[String, String]] = s ~ ".*".r ^^ { _ => Map.empty }
+  def domain: Parser[BSONDocument] = """(?:(?:[\p{Graph}&&[^\.]])+\.)+\p{Alpha}+""".r ^^ { value => BSONDocument("domain" -> BSONString(value)) }
+  def ip: Parser[BSONDocument] = """\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}""".r ^^ { value => BSONDocument("ip" -> BSONString(value)) }
+  def comment(s: String): Parser[BSONDocument] = s ~ ".*".r ^^ { _ => BSONDocument.empty }
 
   def domainParser = "domain" ^^ { _ => ("domain" :: Nil, domain) }
   def ipParser = "ip" ^^ { _ => ("ip" :: Nil, ip) }
@@ -29,7 +31,7 @@ object ListParser extends JavaTokenParsers {
     case name ~ _ ~ _ ~ parameterList =>
       val params = parameterList.toMap
       val parsers = params.getOrElse("parsers", sys.error("parsers not present in configuration"))
-        .asInstanceOf[(List[String], Parser[Map[String, String]])]
+        .asInstanceOf[(List[String], Parser[BSONDocument])]
 
       ReputationList(
         name,
