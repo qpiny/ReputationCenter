@@ -17,17 +17,30 @@ class Datastore(implicit val executionContext: ExecutionContext) {
   val listCollection = listdb("list")
   val objCollection = listdb("objects")
 
-  def get(list: ReputationList) = {
+  def update(list: ReputationList): BSONDocument => Unit = {
+    val now = BSONDateTime(new Date().getTime)
+    listCollection.update(
+      BSONDocument("name" -> list.name),
+      BSONDocument("$set" -> BSONDocument("lastUpdate" -> now)))
+      .flatMap {
+        case le @ LastError(_, _, _, _, _, _, true) =>
+          Future.successful(le)
+        case LastError(_, _, _, _, _, _, false) =>
+          listCollection.insert(BSONDocument(
+            "name" -> list.name,
+            "url" -> list.url,
+            "confidence" -> list.confidence,
+            "firstUpade" -> now,
+            "lastUpdate" -> now))
+      }
+      .onFailure {
+        case t => println("List insert failed : " + t)
+      }
 
-  }
-  class Liststore(list: ReputationList) {
-
-    def update(obj: BSONDocument) = {
+    (obj) =>
       val query = BSONDocument(list.idFields.flatMap(f => obj.get(f).map(f -> _)))
-      val now = BSONDateTime(new Date().getTime)
-
       objCollection
-        .update(query, BSONDocument("$set" -> (query ++ BSONDocument("lastInsert" -> now, "a" -> "c"))))
+        .update(query, BSONDocument("$set" -> (query ++ BSONDocument("lastInsert" -> now))))
         .flatMap {
           case le @ LastError(_, _, _, _, _, _, true) =>
             println("Record updated")
@@ -37,9 +50,11 @@ class Datastore(implicit val executionContext: ExecutionContext) {
             objCollection.insert(query ++ BSONDocument("lastInsert" -> now, "firstInsert" -> now))
         }
         .onFailure {
-          case t => println("Insert failed : " + t)
+          case t => println("Record insert failed : " + t)
         }
-    }
   }
+
+  // TODO def search() with criteria
+  // search will add item in database
 }
 

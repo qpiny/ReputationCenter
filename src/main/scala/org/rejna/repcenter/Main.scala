@@ -23,7 +23,7 @@ object Main extends App {
       case Success(result, _) =>
         for (replist <- result) {
           println(s"list ${replist.name}")
-          replist.get
+          replist.get(datastore)
         }
       case NoSuccess(message, _) => log.error("Configuration parsing failed : " + message)
     }
