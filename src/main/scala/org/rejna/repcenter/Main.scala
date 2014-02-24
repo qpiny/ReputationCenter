@@ -17,7 +17,7 @@ object Main extends App {
     implicit val system = ActorSystem()
     implicit val executionContext = system.dispatcher
     
-    val datastore = new Datastore()
+    val datastore = Datastore(system)
     
     ListParser.loadConfiguration(new FileReader("src/main/resources/reputation.conf")) match {
       case Success(result, _) =>
